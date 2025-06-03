@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Khulnarshop.xyz - আকর্ষণীয় থ্রি-পিস কালেকশন</title>
+	<script src="https://cdn.tailwindcss.com"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.9/babel.min.js"></script>
+	<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Bengali:wght@400;700;900&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet" />
+	<link crossorigin="anonymous" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" referrerpolicy="no-referrer" rel="stylesheet" /><meta name="theme-color" content="#7E22CE"> <!-- Updated theme color -->
+
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '1395349864990911'); // Assuming Pixel ID remains same or should be updated by user
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=1395349864990911&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getDatabase, ref, push, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+  // WARNING: Storing API keys directly in client-side code is a security risk.
+  // Consider using environment variables or a backend proxy.
+  const firebaseConfig = {
+    apiKey: "AIzaSyCyf9mTmbnXTB4hdsQpePNY-Hdgt347GPY", // User-provided, kept as is
+    authDomain: "krishighar.firebaseapp.com", // Should ideally be updated for khulnarshop.xyz
+    databaseURL: "https://krishighar-default-rtdb.firebaseio.com", // Should ideally be updated
+    projectId: "krishighar", // Should ideally be updated
+    storageBucket: "krishighar.firebasestorage.app", // Should ideally be updated
+    messagingSenderId: "587381600768", // Should ideally be updated
+    appId: "1:587381600768:web:157abdd3b20a3e4f23dee5" // Should ideally be updated
+  };
+  const app = initializeApp(firebaseConfig);
+  const database = getDatabase(app);
+  window.firebaseUtils = { database, ordersRef: ref(database, 'orders'), push, serverTimestamp };
+</script>
+
+</head>
+<body class="bg-gradient-to-br from-purple-100 via-pink-50 to-indigo-50 font-['Hind_Siliguri'] text-gray-800"> <!-- UPDATED BODY BG -->
+<div id="root"></div>
+<script type="text/babel">
+    // Custom Hook for Intersection Observer (No change from original)
+    function useIntersectionObserver(options, runOnce = true) {
+        const [entry, setEntry] = React.useState(null);
+        const [node, setNode] = React.useState(null);
+        const observer = React.useRef(null);
+
+        React.useEffect(() => {
+            if (observer.current) {
+                observer.current.disconnect();
+            }
+
+            observer.current = new window.IntersectionObserver(([entry]) => {
+                if (entry.isIntersecting) {
+                    setEntry(entry);
+                    if (runOnce && observer.current) {
+                        observer.current.unobserve(entry.target);
+                    }
+                }
+            }, options);
+
+            const { current: currentObserver } = observer;
+            if (node) {
+                currentObserver.observe(node);
+            }
+
+            return () => {
+                if (currentObserver) {
+                    currentObserver.disconnect();
+                }
+            };
+        }, [node, options, runOnce]);
+
+        return [setNode, entry];
+    }
+
+    // Component to wrap sections for scroll-triggered animation (No change from original)
+    const AnimatedSection = ({ children, className, threshold = 0.1, delay = "delay-0" }) => {
+        const [ref, entry] = useIntersectionObserver({ threshold: threshold }, true);
+        const isVisible = !!entry?.isIntersecting;
+
+        return (
+            <div
+                ref={ref}
+                className={`${className || ''} transition-all duration-700 ease-out ${delay} ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+            >
+                {children}
+            </div>
+        );
+    };
+
+    function OrderForm({ isOpen, onClose, productToOrder, recommendedUnits }) {
+        const [name, setName] = React.useState('');
+        const [phone, setPhone] = React.useState('');
+        const [address, setAddress] = React.useState('');
+        const [quantityUnits, setQuantityUnits] = React.useState(1);
+        const [isSubmitted, setIsSubmitted] = React.useState(false);
+        const [isLoading, setIsLoading] = React.useState(false);
+
+        const DELIVERY_FEE = 0; // Assuming free delivery for calculation simplicity, actual terms on page.
+
+        React.useEffect(() => {
+            if (isOpen && productToOrder) {
+                let initialUnits = 1;
+                if (recommendedUnits) {
+                    const units = parseInt(String(recommendedUnits).replace('unit', ''));
+                    if (!isNaN(units) && units > 0) {
+                        initialUnits = units;
+                    }
+                }
+                setQuantityUnits(initialUnits);
+                // Reset fields on new product or opening
+                setName('');
+                setPhone('');
+                setAddress('');
+                setIsSubmitted(false);
+            }
+        }, [productToOrder, recommendedUnits, isOpen]);
+
+        if (!isOpen || !productToOrder) return null;
+
+        const PRICE_PER_UNIT = productToOrder.price;
+
+        const handleQuantityChange = (e) => {
+            const value = e.target.value;
+            if (value === "") {
+                setQuantityUnits("");
+            } else {
+                const numValue = parseInt(value);
+                setQuantityUnits(isNaN(numValue) ? "" : numValue);
+            }
+        };
+
+        const currentQuantity = parseInt(quantityUnits);
+        const subTotal = (isNaN(currentQuantity) || currentQuantity < 1) ? 0 : currentQuantity * PRICE_PER_UNIT;
+        const totalAmount = subTotal + DELIVERY_FEE;
+
+        const handleSubmit = async (e) => {
+            e.preventDefault();
+            const finalQuantityUnits = parseInt(quantityUnits);
+            if (isNaN(finalQuantityUnits) || finalQuantityUnits < 1) {
+                alert("দয়া করে কমপক্ষে ১টি পণ্যের পরিমাণ উল্লেখ করুন।");
+                if (isNaN(finalQuantityUnits)) setQuantityUnits(1);
+                else if (finalQuantityUnits < 1) setQuantityUnits(1);
+                return;
+            }
+            setIsLoading(true);
+            const orderData = {
+                name: name, phone: phone, address: address, quantity: finalQuantityUnits,
+                pricePerUnit: PRICE_PER_UNIT, subTotal: finalQuantityUnits * PRICE_PER_UNIT,
+                deliveryFee: DELIVERY_FEE, totalAmount: (finalQuantityUnits * PRICE_PER_UNIT) + DELIVERY_FEE,
+                status: "Pending", orderTimestamp: window.firebaseUtils.serverTimestamp(),
+                product_id: productToOrder.id,
+                product_name: productToOrder.name
+            };
+            try {
+                await window.firebaseUtils.push(window.firebaseUtils.ordersRef, orderData);
+                setIsSubmitted(true);
+                if (typeof fbq === 'function') {
+                    fbq('track', 'Purchase', {
+                        value: orderData.totalAmount,
+                        currency: 'BDT',
+                        content_ids: [orderData.product_id],
+                        content_name: orderData.product_name,
+                        content_type: 'product',
+                        num_items: orderData.quantity,
+                    });
+                }
+            } catch (error) {
+                console.error("Firebase এ অর্ডার পাঠাতে সমস্যা হয়েছে:", error);
+                alert("দুঃখিত, অর্ডারটি সম্পন্ন করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        return (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity duration-300 ease-in-out" onClick={onClose}>
+                <div
+                    className="bg-white/95 backdrop-blur-md p-5 sm:p-7 rounded-2xl shadow-2xl w-full max-w-md transform transition-all duration-500 scale-100 border border-purple-400/50" /* UPDATED BORDER */
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <button onClick={onClose} className="absolute top-3 right-3 text-gray-500 hover:text-purple-600 text-2xl z-10"> {/* UPDATED HOVER COLOR */}
+                        <i className="fas fa-times-circle"></i>
+                    </button>
+                    {!isSubmitted ? (
+                        <>
+                            <h2 className="text-xl sm:text-2xl font-bold mb-2 text-center text-purple-700 font-['Noto_Serif_Bengali']">অর্ডার করুন: {productToOrder.name}</h2> {/* UPDATED TEXT COLOR */}
+                            <p className="text-xs text-center text-gray-600 mb-4">মূল্য: {productToOrder.price.toLocaleString('bn-BD')} টাকা</p>
+                            <form onSubmit={handleSubmit} className="space-y-3.5">
+                                <div className="relative">
+                                    <input type="text" id="name" placeholder=" " value={name} onChange={(e) => setName(e.target.value)} className="peer w-full p-2.5 pt-4 border border-gray-300 rounded-lg focus:ring-1 focus:ring-purple-500 focus:outline-none bg-transparent text-gray-800 text-sm sm:text-base placeholder-transparent" required /> {/* UPDATED FOCUS RING */}
+                                    <label htmlFor="name" className="absolute left-2.5 top-0.5 text-gray-500 text-xs transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-3 peer-focus:top-0.5 peer-focus:text-xs peer-focus:text-purple-600">আপনার নাম</label> {/* UPDATED FOCUS LABEL COLOR */}
+                                </div>
+                                <div className="relative">
+                                    <input type="tel" id="phone" placeholder=" " value={phone} onChange={(e) => setPhone(e.target.value)} className="peer w-full p-2.5 pt-4 border border-gray-300 rounded-lg focus:ring-1 focus:ring-purple-500 focus:outline-none bg-transparent text-gray-800 text-sm sm:text-base placeholder-transparent" required /> {/* UPDATED FOCUS RING */}
+                                    <label htmlFor="phone" className="absolute left-2.5 top-0.5 text-gray-500 text-xs transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-3 peer-focus:top-0.5 peer-focus:text-xs peer-focus:text-purple-600">ফোন নম্বর</label> {/* UPDATED FOCUS LABEL COLOR */}
+                                </div>
+                                 <div className="relative">
+                                    <input type="text" id="address" placeholder=" " value={address} onChange={(e) => setAddress(e.target.value)} className="peer w-full p-2.5 pt-4 border border-gray-300 rounded-lg focus:ring-1 focus:ring-purple-500 focus:outline-none bg-transparent text-gray-800 text-sm sm:text-base placeholder-transparent" required /> {/* UPDATED FOCUS RING */}
+                                    <label htmlFor="address" className="absolute left-2.5 top-0.5 text-gray-500 text-xs transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-3 peer-focus:top-0.5 peer-focus:text-xs peer-focus:text-purple-600">সম্পূর্ণ ঠিকানা</label> {/* UPDATED FOCUS LABEL COLOR */}
+                                </div>
+                                <div className="relative">
+                                    <input type="number" id="quantityUnits" placeholder=" " value={quantityUnits} onChange={handleQuantityChange} min="1" className="peer w-full p-2.5 pt-4 border border-gray-300 rounded-lg focus:ring-1 focus:ring-purple-500 focus:outline-none bg-transparent text-gray-800 text-sm sm:text-base placeholder-transparent" required /> {/* UPDATED FOCUS RING */}
+                                    <label htmlFor="quantityUnits" className="absolute left-2.5 top-0.5 text-gray-500 text-xs transition-all peer-placeholder-shown:text-sm peer-placeholder-shown:top-3 peer-focus:top-0.5 peer-focus:text-xs peer-focus:text-purple-600">পরিমাণ (টি)</label> {/* UPDATED FOCUS LABEL COLOR */}
+                                </div>
+
+                                <div className="pt-2 space-y-1.5 text-sm sm:text-base">
+                                    <p className="flex justify-between"><span>পণ্যের দাম:</span> <span className="font-semibold">{subTotal.toLocaleString('bn-BD')} ৳</span></p>
+                                    <p className="flex justify-between">
+                                        <span>ডেলিভারি ফি:</span>
+                                        <span className="font-semibold">
+                                            {DELIVERY_FEE > 0 ? `${DELIVERY_FEE.toLocaleString('bn-BD')} ৳` : 'ফ্রি (শর্ত প্রযোজ্য)'}
+                                        </span>
+                                    </p>
+                                    <hr className="my-1 border-purple-200"/> {/* UPDATED BORDER */}
+                                    <p className="flex justify-between text-base sm:text-lg"><strong>মোট পরিশোধযোগ্য:</strong> <strong className="text-purple-600">{totalAmount.toLocaleString('bn-BD')} ৳</strong></p> {/* UPDATED TEXT COLOR */}
+                                </div>
+
+                                <div className="flex justify-between gap-2.5 pt-2">
+                                    <button type="button" onClick={onClose} className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition duration-300 flex-1 text-sm font-semibold" disabled={isLoading}>বাতিল</button>
+                                    <button type="submit" className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-4 py-2 rounded-lg hover:from-purple-600 hover:to-pink-700 transition duration-300 flex-1 text-sm font-semibold shadow-md hover:shadow-lg disabled:opacity-70" disabled={isLoading}> {/* UPDATED BUTTON COLORS */}
+                                        {isLoading ? <><i className="fas fa-spinner fa-spin mr-1.5"></i>প্রসেসিং...</> : "অর্ডার কনফার্ম করুন"}
+                                    </button>
+                                </div>
+                            </form>
+                        </>
+                    ) : (
+                        <div className="text-center py-8">
+                            <i className="fas fa-check-circle text-purple-500 text-5xl mb-3"></i> {/* UPDATED ICON COLOR */}
+                            <h3 className="text-xl font-semibold text-purple-700 mb-1.5">অর্ডার সফলভাবে পাঠানো হয়েছে!</h3> {/* UPDATED TEXT COLOR */}
+                            <p className="text-gray-700 text-sm mb-5">আমাদের প্রতিনিধি শীঘ্রই আপনার সাথে যোগাযোগ করে আপনার পছন্দের পোশাকটি পৌঁছে দেবে। ধন্যবাদ!</p>
+                            <button onClick={() => { setIsSubmitted(false); onClose(); }} className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-6 py-2 rounded-lg hover:from-purple-600 hover:to-pink-700 transition duration-300 font-semibold text-sm">বন্ধ করুন</button> {/* UPDATED BUTTON COLORS */}
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    function AiPackageAssistant({ setRecommendedUnits, openForm, defaultProduct }) {
+        const [currentStep, setCurrentStep] = React.useState(0);
+        const [answers, setAnswers] = React.useState({ occasion: '', design: '', color_pref: '' });
+        const [isCalculating, setIsCalculating] = React.useState(false);
+
+        const questions = [
+            { q_short: "অনুষ্ঠান?", icon: 'fas fa-calendar-check', question: 'কি ধরনের অনুষ্ঠানের জন্য পোশাক খুঁজছেন?', options: [{ label: 'নিত্য ব্যবহার্য', value: 'daily' }, { label: 'পার্টি/উৎসব', value: 'party' }, { label: 'অফিসিয়াল', value: 'official' }], key: 'occasion' },
+            { q_short: "ডিজাইন?", icon: 'fas fa-drafting-compass', question: 'সাধারণত কেমন ডিজাইন পছন্দ করেন?', options: [{ label: 'সিম্পল ও এলিগেন্ট', value: 'simple' }, { label: 'ভারী কাজ ও গর্জিয়াস', value: 'gorgeous' }, { label: 'ট্রেন্ডি ও আধুনিক', value: 'trendy' }], key: 'design' },
+            { q_short: "রঙ?", icon: 'fas fa-palette', question: 'আপনার কাছে রঙের গুরুত্ব কেমন?', options: [{ label: 'খুব বেশি', value: 'very_important' }, { label: 'মোটামুটি', value: 'important' }, { label: 'ডিজাইন প্রধান', value: 'design_primary' }], key: 'color_pref' }
+        ];
+        
+        const handleAnswer = (key, value) => {
+            setAnswers(prev => ({ ...prev, [key]: value }));
+            setIsCalculating(true);
+            setTimeout(() => {
+                setCurrentStep(prev => prev + 1);
+                setIsCalculating(false);
+            }, 600);
+        };
+
+        const calculateRecommendation = () => {
+            const recUnits = '1unit'; 
+            setRecommendedUnits(recUnits);
+            return recUnits;
+        };
+
+        const recommendationUnits = currentStep >= questions.length ? calculateRecommendation() : null;
+
+        return (
+            <section className="py-8 sm:py-10 bg-gradient-to-br from-purple-100 via-pink-100 to-indigo-100 rounded-2xl shadow-xl mx-2 sm:mx-auto max-w-xl relative z-10 border-2 border-purple-400 shadow-purple-300/30"> {/* UPDATED BG, BORDER, SHADOW */}
+                <div className="container mx-auto px-3 sm:px-4">
+                    <div className="flex items-center justify-center mb-3 sm:mb-4">
+                        <i className="fas fa-brain text-3xl sm:text-4xl text-purple-600 mr-2.5"></i> {/* UPDATED ICON COLOR */}
+                        <h2 className="text-lg sm:text-xl font-bold text-center text-purple-700 font-['Noto_Serif_Bengali']">আপনার জন্য সেরা পোশাক কোনটি?</h2> {/* UPDATED TEXT COLOR */}
+                    </div>
+                    <p className="text-center text-gray-700 mb-4 sm:mb-5 text-xs sm:text-sm max-w-md mx-auto">
+                        কোন পোশাকটি আপনার জন্য সঠিক বুঝতে পারছেন না? কয়েকটি সহজ প্রশ্নের উত্তর দিন, আমরা আপনাকে সাহায্য করবো!
+                    </p>
+                    <div className="relative min-h-[200px] sm:min-h-[220px] bg-white/70 backdrop-blur-sm p-3 sm:p-4 rounded-xl shadow-inner border border-purple-200/80"> {/* UPDATED BORDER */}
+                        <div className="flex justify-center mb-3.5 space-x-1.5">
+                            {questions.map((q, index) => (
+                                <div key={index} title={q.q_short} className={`w-2 h-2 rounded-full transition-all duration-500 cursor-help ${index < currentStep ? 'bg-purple-500' : index === currentStep ? 'bg-purple-500 scale-125 ring-1.5 ring-purple-300' : 'bg-gray-300'}`}></div> /* UPDATED COLORS */
+                            ))}
+                        </div>
+
+                        {isCalculating && currentStep < questions.length && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 backdrop-blur-sm z-10 rounded-xl">
+                                <i className="fas fa-cogs fa-spin text-2xl text-purple-500 mb-2"></i> {/* UPDATED ICON COLOR */}
+                                <p className="text-purple-700 text-sm font-semibold">বিশ্লেষণ চলছে...</p> {/* UPDATED TEXT COLOR */}
+                            </div>
+                        )}
+
+                        {questions.map((q, index) => (
+                            <div key={index} className={`absolute w-full left-0 px-3 sm:px-4 transition-all duration-700 ease-in-out transform ${index === currentStep ? 'opacity-100 translate-y-0' : 'opacity-0 pointer-events-none -translate-y-10'}`}>
+                                {index === currentStep && !isCalculating && (
+                                    <div className="text-center">
+                                        <div className="flex items-center justify-center text-purple-600 mb-2.5"> {/* UPDATED TEXT COLOR */}
+                                            <i className={`${q.icon} text-xl mr-1.5`}></i>
+                                            <p className="text-sm sm:text-base font-semibold text-purple-700">{q.question}</p> {/* UPDATED TEXT COLOR */}
+                                        </div>
+                                        <div className="grid grid-cols-1 gap-2 mt-3 max-w-xs mx-auto">
+                                            {q.options.map((option) => (
+                                                <button
+                                                    key={option.value}
+                                                    onClick={() => handleAnswer(q.key, option.value)}
+                                                    className="w-full text-center p-2 sm:p-2.5 bg-gradient-to-r from-purple-50 to-pink-100 rounded-lg shadow-sm hover:from-purple-100 hover:to-pink-200 transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-1 focus:ring-purple-400 border border-purple-200 hover:border-purple-300" /* UPDATED BUTTON COLORS */
+                                                >
+                                                    <span className="text-xs sm:text-sm font-medium text-gray-800">{option.label}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                        {currentStep >= questions.length && recommendationUnits && !isCalculating && (
+                            <div className="animate-fade-in text-center p-3 sm:p-4 bg-gradient-to-br from-purple-100 to-pink-200 rounded-xl shadow-md border border-purple-300/70"> {/* UPDATED BG, BORDER */}
+                                <i className="fas fa-lightbulb text-yellow-400 text-3xl sm:text-4xl mb-2"></i> {/* Yellow kept for contrast */}
+                                <h3 className="text-base sm:text-lg font-bold text-purple-800 mb-1 font-['Noto_Serif_Bengali']">AI সুপারিশ:</h3> {/* UPDATED TEXT COLOR */}
+                                <p className="text-sm sm:text-base font-semibold text-gray-800 mb-1">
+                                    আপনার জন্য আমাদের <span className="text-purple-700 font-extrabold text-lg sm:text-xl block">নতুন ডিজাইনের থ্রি-পিস</span> একটি দারুণ পছন্দ হবে! {/* UPDATED TEXT COLOR */}
+                                </p>
+                                <p className="text-xs text-gray-600 mb-2.5">এই কালেকশনটি আপনার চাহিদা পূরণ করবে!</p>
+                                <button
+                                    onClick={() => openForm(defaultProduct, recommendationUnits)}
+                                    className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-5 py-2 rounded-lg hover:from-purple-600 hover:to-pink-700 font-semibold text-xs sm:text-sm transition duration-300 transform hover:scale-105 shadow-md hover:shadow-lg" /* UPDATED BUTTON COLORS */
+                                >
+                                    <i className="fas fa-check-circle mr-1"></i> এই থ্রি-পিসটি অর্ডার করুন
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    {(currentStep < questions.length || !recommendationUnits) && !isCalculating && (
+                         <div className="text-center mt-5">
+                            <button
+                                onClick={() => openForm(defaultProduct, "1unit")}
+                                className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-6 py-2.5 rounded-lg hover:from-purple-600 hover:to-pink-700 font-semibold text-sm sm:text-base transition duration-300 transform hover:scale-105 shadow-lg" /* UPDATED BUTTON COLORS */
+                            >
+                                <i className="fas fa-shopping-cart mr-2"></i> এখনই অর্ডার করুন (ডিফল্ট)
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </section>
+        );
+    }
+
+    const FeatureCard = ({ icon, title, desc }) => (
+        <div className="relative p-4 sm:p-5 bg-white/90 backdrop-blur-md rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 border border-purple-200/60 overflow-hidden group"> {/* UPDATED BORDER */}
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-400 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div> {/* UPDATED GRADIENT */}
+            <div className="flex items-center mb-2">
+                <i className={`${icon} text-2xl text-purple-600 mr-3`}></i> {/* UPDATED ICON COLOR */}
+                <h3 className="text-md sm:text-lg font-semibold text-purple-800 font-['Noto_Serif_Bengali']">{title}</h3> {/* UPDATED TEXT COLOR */}
+            </div>
+            <p className="text-xs sm:text-sm text-gray-700 leading-relaxed">{desc}</p>
+        </div>
+    );
+
+    const WhyChooseUsItem = ({ icon, title, desc }) => (
+        <li className="flex items-start gap-2.5 p-2.5 bg-white/40 rounded-lg hover:bg-purple-50/60 transition-colors duration-300 border border-purple-100"> {/* UPDATED BG, BORDER */}
+            <i className={`${icon} text-purple-600 text-lg sm:text-xl mt-0.5`}></i> {/* UPDATED ICON COLOR */}
+            <div>
+                <strong className="text-sm sm:text-base text-gray-800 font-semibold">{title}:</strong>
+                <span className="text-xs sm:text-sm text-gray-700"> {desc}</span>
+            </div>
+        </li>
+    );
+
+    const ProductCatalog = ({ products, openOrderForm }) => {
+        if (!products || products.length === 0) return null;
+
+        return (
+            <section className="py-8 sm:py-10 bg-gradient-to-b from-white via-purple-50 to-pink-50"> {/* UPDATED BG */}
+                <div className="container mx-auto px-2 sm:px-4">
+                    <h2 className="text-xl sm:text-2xl font-bold text-center mb-5 sm:mb-6 text-purple-800 font-['Noto_Serif_Bengali']">আমাদের লেটেস্ট থ্রি-পিস কালেকশন</h2> {/* UPDATED TEXT COLOR */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                        {products.map((product, index) => (
+                            <div key={index} className="bg-white rounded-xl shadow-lg p-3 sm:p-4 flex flex-col items-center transform transition-all duration-300 hover:scale-105 border border-purple-100 product-card-item"> {/* UPDATED BORDER */}
+                                <div className="overflow-hidden rounded-lg mb-3 w-full">
+                                    <img src={product.image} alt={`${product.name} - থ্রি পিস`} className="w-full h-56 sm:h-64 object-cover product-card-image"/>
+                                </div>
+                                <h3 className="text-md sm:text-lg font-semibold text-gray-800 mb-1 text-center font-['Noto_Serif_Bengali']">{product.name}</h3>
+                                <p className="text-sm text-purple-600 font-bold mb-1">{product.price.toLocaleString('bn-BD')} ৳</p> {/* UPDATED TEXT COLOR */}
+                                <p className="text-xs text-gray-600 mb-2 px-1 text-center h-10 overflow-hidden">{product.shortDescription}</p>
+                                <button
+                                    onClick={() => openOrderForm(product, "1unit")}
+                                    className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white px-3 py-2 rounded-md hover:from-purple-600 hover:to-pink-700 font-semibold text-xs sm:text-sm transition duration-300 shadow-sm hover:shadow-md mt-auto" /* UPDATED BUTTON COLORS */
+                                >
+                                    <i className="fas fa-shopping-cart mr-1.5"></i> অর্ডার করুন
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+        );
+    };
+
+    function MobileBottomNav() {
+        const phoneNumber = "01798687328";
+        const whatsappMessage = encodeURIComponent("আমি আপনাদের থ্রি-পিস কালেকশন সম্পর্কে জানতে চাই।");
+
+        return (
+            <div className="fixed bottom-0 left-0 right-0 bg-white shadow-top-lg p-2.5 border-t border-slate-200 flex justify-around items-center z-40 md:hidden">
+                <a
+                    href={`https://wa.me/88${phoneNumber}?text=${whatsappMessage}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex flex-col items-center text-purple-600 hover:text-purple-800 transition-colors duration-200 px-3 py-1 rounded-md" /* UPDATED COLORS */
+                >
+                    <i className="fab fa-whatsapp text-2xl"></i>
+                    <span className="text-xs mt-0.5 font-medium">WhatsApp</span>
+                </a>
+                <a
+                    href={`tel:+88${phoneNumber}`}
+                    className="flex flex-col items-center text-purple-600 hover:text-purple-800 transition-colors duration-200 px-3 py-1 rounded-md" /* UPDATED COLORS */
+                >
+                    <i className="fas fa-phone-alt text-xl"></i>
+                    <span className="text-xs mt-0.5 font-medium">কল করুন</span>
+                </a>
+            </div>
+        );
+    }
+
+
+    function App() {
+        const [isFormOpen, setIsFormOpen] = React.useState(false);
+        const [aiRecommendedUnits, setAiRecommendedUnits] = React.useState('1unit');
+        const [selectedProductForForm, setSelectedProductForForm] = React.useState(null);
+        
+        const contactPhoneNumber = "01798687328";
+
+        const productsData = [
+            {
+                id: 'PUSPHA_ORGANZA_TP_1400',
+                name: 'পুষ্পা',
+                shortDescription: 'ওরগেনজা কাপড়ের আকর্ষণীয় থ্রি-পিস, মিক্সড কালার প্রিন্টে হালকা এমব্রয়ডারি করা।',
+                fabric: 'ওরগেনজা',
+                bottomFabric: 'ওরগেনজা',
+                ornaFabric: 'ওরগেনজা',
+                color: 'মিক্সড কালার প্রিন্ট (যেমনঃ কালো, মেরুন ইত্যাদি)',
+                size: 'ফ্রি সাইজ',
+                handwork: 'হালকা এমব্রয়ডারি',
+                price: 1400,
+                image: 'https://i.imgur.com/p4CjOp6.jpeg', // THIS IMAGE URL IS UPDATED
+                deliveryInfo: 'ডেলিভারি চার্জ ঢাকায় ফ্রি, সারা বাংলাদেশে হোম ডেলিভারি।'
+            },
+            {
+                id: 'WHITE_GOLD_PAJAKAJ_TP_1950',
+                name: 'ওয়াইট গোল্ড (ডিজাইন ১)',
+                shortDescription: 'হাই কোয়ালিটি পাজাকাজ কাপড়ের ওয়াইট গোল্ড থ্রি-পিস, হালকা এমব্রয়ডারি সহ।',
+                fabric: 'পাজাকাজ',
+                bottomFabric: 'পাজাকাজ',
+                ornaFabric: 'পাজাকাজ',
+                color: 'বিভিন্ন আকর্ষণীয় রঙ (যেমন ছবির রঙ বা অন্য ৪টি রঙ)',
+                size: 'ফ্রি সাইজ',
+                handwork: 'হালকা এমব্রয়ডারি',
+                price: 1950,
+                image: 'https://i.imgur.com/TGmFMd5.jpeg',
+                deliveryInfo: 'ডেলিভারি চার্জ ঢাকায় ফ্রি, সারা বাংলাদেশে হোম ডেলিভারি।'
+            },
+            {
+                id: 'WHITE_GOLD_PAJAKAJ_TP_1750',
+                name: 'ওয়াইট গোল্ড (ডিজাইন ২)',
+                shortDescription: 'স্টাইলিশ পাজাকাজ কাপড়ের ওয়াইট গোল্ড থ্রি-পিস, হালকা এমব্রয়ডারি সহ।',
+                fabric: 'পাজাকাজ',
+                bottomFabric: 'পাজাকাজ',
+                ornaFabric: 'পাজাকাজ',
+                color: 'বিভিন্ন আকর্ষণীয় রঙ (যেমন ছবির রঙ বা অন্য ৪টি রঙ)',
+                size: 'ফ্রি সাইজ',
+                handwork: 'হালকা এমব্রয়ডারি',
+                price: 1750,
+                image: 'https://i.imgur.com/0g2SE2Z.jpeg',
+                deliveryInfo: 'ডেলিভারি চার্জ ঢাকায় ফ্রি, সারা বাংলাদেশে হোম ডেলিভারি।'
+            }
+        ];
+        
+        React.useEffect(() => {
+            if (productsData.length > 0 && !selectedProductForForm) {
+                setSelectedProductForForm(productsData[0]);
+            }
+        }, [productsData, selectedProductForForm]);
+
+
+        const imageSources = { 
+            transparentLeavesPattern: "https://www.transparenttextures.com/patterns/leaves.png", // Could be changed to a more abstract/purple pattern
+            logo: "https://i.imgur.com/Wl5wyD2.jpeg"
+        };
+
+        const openOrderForm = (product, recommendedUnits = '1unit') => {
+            setSelectedProductForForm(product);
+            setAiRecommendedUnits(recommendedUnits);
+            setIsFormOpen(true);
+            if (typeof fbq === 'function' && product) {
+                const tempQuantity = parseInt(String(recommendedUnits).replace('unit','')) || 1;
+                const tempSubTotal = tempQuantity * product.price;
+                const tempTotal = tempSubTotal + 0; 
+
+                fbq('track', 'InitiateCheckout', {
+                    value: tempTotal,
+                    currency: 'BDT',
+                    content_ids: [product.id],
+                    content_name: product.name,
+                    content_type: 'product',
+                    num_items: tempQuantity
+                });
+            }
+        };
+
+        const closeOrderForm = () => setIsFormOpen(false);
+
+        const productBenefits = [
+            { icon: 'fas fa-tshirt', title: 'উচ্চ মানের কাপড়', desc: 'আমাদের প্রতিটি পোশাকে ব্যবহার করা হয় প্রিমিয়াম কোয়ালিটির কাপড়, যা দেয় আরাম ও দীর্ঘস্থায়িত্ব।' },
+            { icon: 'fas fa-palette', title: 'আকর্ষণীয় ডিজাইন', desc: 'আধুনিক ট্রেন্ড ও ঐতিহ্যের সমন্বয়ে তৈরি করা হয় প্রতিটি ডিজাইন, যা আপনাকে করে তুলবে অনন্য।' },
+            { icon: 'fas fa-ruler-combined', title: 'সঠিক ফিটিং', desc: 'ফ্রি সাইজ ও স্ট্যান্ডার্ড মেজারমেন্টে তৈরি, যা প্রায় সকলের জন্য মানানসই ও আরামদায়ক।' },
+            { icon: 'fas fa-hand-sparkles', title: 'নিখুঁত হাতের কাজ', desc: 'কিছু বিশেষ পোশাকে রয়েছে দক্ষ কারিগরের নিপুণ হাতের কাজ, যা যোগ করে বাড়তি আকর্ষণ।'},
+            { icon: 'fas fa-tags', title: 'সাশ্রয়ী মূল্য', desc: 'উচ্চ গুণগত মান বজায় রেখেও আমরা চেষ্টা করি সাধ্যের মধ্যে সেরা পণ্যটি আপনাদের কাছে পৌঁছে দিতে।' },
+            { icon: 'fas fa-gem', title: 'লেটেস্ট কালেকশন', desc: 'আমরা সবসময় নতুন ও আকর্ষণীয় ডিজাইনের পোশাক নিয়ে আসি, যা আপনার ফ্যাশন সেন্সকে বাড়িয়ে তুলবে।' }
+        ];
+
+        const whyChooseKhulnarshop = [
+            { icon: 'fas fa-check-circle', title: 'সেরা মানের নিশ্চয়তা', desc: 'আমরা প্রতিটি পণ্যের গুণগত মান নিশ্চিত করি।' },
+            { icon: 'fas fa-thumbs-up', title: 'অনন্য কালেকশন', desc: 'আমাদের রয়েছে বিভিন্ন ডিজাইন ও রঙের পোশাকের সমাহার।' },
+            { icon: 'fas fa-shipping-fast', title: 'সারা দেশে হোম ডেলিভারি', desc: 'আপনার অর্ডারকৃত পণ্য দ্রুততম সময়ে আপনার ঠিকানায় পৌঁছে দেওয়া হয় (ঢাকায় ফ্রি ডেলিভারি)।' },
+            { icon: 'fas fa-headset', title: 'গ্রাহক সেবা', desc: 'যেকোনো প্রয়োজনে আমাদের সার্বক্ষণিক গ্রাহক সহায়তা প্রস্তুত।' },
+            { icon: 'fas fa-undo-alt', title: 'সহজ রিটার্ন পলিসি', desc: 'পণ্যে কোনো সমস্যা থাকলে নির্দিষ্ট শর্ত সাপেক্ষে পরিবর্তনের সুযোগ রয়েছে।' },
+            { icon: 'fas fa-lock', title: 'নিরাপদ কেনাকাটা', desc: 'নিশ্চিন্তে অর্ডার করুন, আপনার তথ্য আমাদের কাছে সুরক্ষিত।' }
+        ];
+
+        const heroProduct = productsData.length > 0 ? productsData[0] : null;
+
+
+        return (
+            <React.Fragment>
+                <div className="min-h-screen relative pb-16 md:pb-0 overflow-x-hidden">
+                    <header className="bg-gradient-to-br from-purple-700 via-purple-600 to-pink-700 text-white py-10 sm:py-12 relative overflow-hidden header-animated-bg"> {/* UPDATED HEADER BG */}
+                        <div className="absolute inset-0" style={{ backgroundImage: `url('${imageSources.transparentLeavesPattern}')`, opacity: 0.05 }}></div> {/* Reduced opacity of pattern */}
+                        <div className="container mx-auto text-center relative z-10 px-4">
+                            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold mb-2 sm:mb-3 tracking-tight drop-shadow-lg font-['Noto_Serif_Bengali'] initial-fade-in-up page-title-glow">Khulnarshop.xyz এর নতুন থ্রি-পিস সমাহার</h1>
+                            <p className="text-md sm:text-lg md:text-xl text-purple-100 drop-shadow-md max-w-xl mx-auto initial-fade-in-up initial-delay-200">স্টাইল, আরাম, এবং আধুনিকতা—সব এক পোশাকে! প্রতিটি উৎসবে ও প্রতিদিনের জন্য।</p> {/* UPDATED TEXT COLOR */}
+                        </div>
+                    </header>
+
+                    {heroProduct && (
+                        <section className="container mx-auto py-8 sm:py-10 px-4 text-center">
+                            <div className="relative mx-auto mb-6 sm:mb-8 max-w-lg group initial-scale-up">
+                                <img src={heroProduct.image} alt={heroProduct.name} className="rounded-2xl shadow-xl w-full transition-all duration-500 group-hover:scale-105 border-2 border-white"/>
+                                <div className="absolute -inset-2 bg-gradient-to-r from-purple-300/40 to-pink-500/40 opacity-25 blur-lg rounded-2xl -z-10 group-hover:opacity-40 transition-opacity duration-500"></div> {/* UPDATED BLUR BG */}
+                            </div>
+                            <div className="initial-fade-in-up initial-delay-400">
+                                <h2 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4 text-gray-800 drop-shadow-sm font-['Noto_Serif_Bengali']">{heroProduct.name} - {heroProduct.price.toLocaleString('bn-BD')} ৳</h2>
+                                <p className="text-sm sm:text-base mb-4 sm:mb-6 text-gray-700 max-w-2xl mx-auto leading-relaxed">
+                                    {heroProduct.shortDescription} আকর্ষণীয় ডিজাইন, প্রিমিয়াম কোয়ালিটি ও আরামদায়ক কাপড়ে তৈরি। আপনার প্রতিদিনের ব্যবহার বা যেকোনো অনুষ্ঠানের জন্য উপযুক্ত। (ডেলিভারি চার্জ ঢাকায় <strong className="text-purple-600">ফ্রি</strong>, ঢাকার বাইরে চার্জ প্রযোজ্য) {/* UPDATED TEXT COLOR */}
+                                </p>
+                                <button
+                                    onClick={() => openOrderForm(heroProduct, '1unit')}
+                                    className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-7 py-2.5 sm:px-8 sm:py-3 rounded-lg hover:from-purple-600 hover:to-pink-700 font-semibold text-base sm:text-lg transition duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl main-cta-button" /* UPDATED BUTTON COLORS */
+                                >
+                                    <i className="fas fa-shopping-basket mr-2"></i> এখনই অর্ডার করুন
+                                </button>
+                            </div>
+                        </section>
+                    )}
+                    
+                    <AnimatedSection threshold={0.2}>
+                        <ProductCatalog products={productsData} openOrderForm={openOrderForm} />
+                    </AnimatedSection>
+                    
+                    <AnimatedSection threshold={0.2} delay="delay-200">
+                         <AiPackageAssistant setRecommendedUnits={setAiRecommendedUnits} openForm={openOrderForm} defaultProduct={heroProduct || productsData[0]} />
+                    </AnimatedSection>
+
+                    <AnimatedSection threshold={0.1}>
+                        <section className="py-8 sm:py-10 px-4 bg-gradient-to-b from-white/70 to-purple-50/40"> {/* UPDATED BG */}
+                          <div className="container mx-auto">
+                            <h2 className="text-xl sm:text-2xl font-bold text-center mb-5 sm:mb-7 text-purple-800 drop-shadow-sm font-['Noto_Serif_Bengali']">কেন Khulnarshop.xyz থেকে থ্রি-পিস কিনবেন?</h2> {/* UPDATED TEXT COLOR */}
+                            <ul className="list-none mx-auto max-w-2xl space-y-3 sm:space-y-3.5">
+                                {whyChooseKhulnarshop.map((item, index) => (
+                                    <AnimatedSection key={index} threshold={0.1} delay={`delay-${index * 100 > 500 ? 500 : index * 100}`}>
+                                        <WhyChooseUsItem icon={item.icon} title={item.title} desc={item.desc} />
+                                    </AnimatedSection>
+                                ))}
+                            </ul>
+                            <div className="text-center mt-8 sm:mt-10">
+                                <button
+                                    onClick={() => openOrderForm(heroProduct || productsData[0], '1unit')}
+                                    className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-7 py-2.5 sm:px-8 sm:py-3 rounded-lg hover:from-purple-600 hover:to-pink-700 font-semibold text-base sm:text-lg transition duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl main-cta-button" /* UPDATED BUTTON COLORS */
+                                >
+                                    <i className="fas fa-shopping-cart mr-2"></i> পছন্দের পোশাক অর্ডার করুন
+                                </button>
+                            </div>
+                          </div>
+                        </section>
+                    </AnimatedSection>
+
+                    <AnimatedSection threshold={0.1}>
+                        <section className="container mx-auto pt-6 pb-8 sm:pt-8 sm:pb-10 px-4">
+                             <h2 className="text-xl sm:text-2xl font-bold text-center mb-5 sm:mb-7 text-purple-800 drop-shadow-sm font-['Noto_Serif_Bengali']">আমাদের থ্রি-পিসের বিশেষত্ব</h2> {/* UPDATED TEXT COLOR */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
+                                {productBenefits.map((item, index) => (
+                                   <AnimatedSection key={index} threshold={0.1} delay={`delay-${index * 100 > 500 ? 500 : index * 100}`}>
+                                        <FeatureCard icon={item.icon} title={item.title} desc={item.desc} />
+                                    </AnimatedSection>
+                                ))}
+                            </div>
+                             <div className="text-center mt-8 sm:mt-10">
+                                <button
+                                    onClick={() => openOrderForm(heroProduct || productsData[0], '1unit')}
+                                    className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-7 py-2.5 sm:px-8 sm:py-3 rounded-lg hover:from-purple-600 hover:to-pink-700 font-semibold text-base sm:text-lg transition duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl main-cta-button" /* UPDATED BUTTON COLORS */
+                                >
+                                    <i className="fas fa-shopping-basket mr-2"></i> একটি স্টাইলিশ পোশাক কিনুন
+                                </button>
+                            </div>
+                        </section>
+                    </AnimatedSection>
+
+                    <AnimatedSection threshold={0.05}>
+                        <footer className="bg-gradient-to-t from-purple-800 via-purple-700 to-pink-800 text-gray-200 py-6 sm:py-8 relative overflow-hidden footer-animated-bg"> {/* UPDATED FOOTER BG */}
+                            <div className="absolute inset-0" style={{ backgroundImage: `url('${imageSources.transparentLeavesPattern}')`, opacity: 0.04 }}></div> {/* Reduced opacity */}
+                            <div className="container mx-auto text-center relative z-10 px-4">
+                                <img src={imageSources.logo} alt="Khulnarshop.xyz Logo" className="w-16 h-16 mx-auto mb-2 rounded-full shadow-md border-2 border-purple-400/70" /> {/* UPDATED BORDER */}
+                                <h4 className="text-lg font-semibold text-white mb-0.5 font-['Noto_Serif_Bengali']">Khulnarshop.xyz</h4>
+                                <p className="text-xs text-purple-200 mb-2">স্টাইলিশ ও আধুনিক পোশাকের বিশ্বস্ত ঠিকানা</p> {/* UPDATED TEXT COLOR */}
+                                
+                                <div className="flex justify-center items-center space-x-4 mb-3">
+                                    <a href={`https://wa.me/88${contactPhoneNumber}?text=Khulnarshop.xyz%20site%20feedback`} target="_blank" rel="noopener noreferrer" className="text-purple-200 hover:text-white transition-colors duration-300 text-xl"> {/* UPDATED COLORS */}
+                                        <i className="fab fa-whatsapp"></i>
+                                    </a>
+                                    <a href={`tel:+88${contactPhoneNumber}`} className="text-purple-200 hover:text-white transition-colors duration-300 text-lg"> {/* UPDATED COLORS */}
+                                        <i className="fas fa-phone-alt"></i>
+                                    </a>
+                                </div>
+                                
+                                <p className="text-xs sm:text-sm text-gray-300">© {new Date().getFullYear()} Khulnarshop.xyz. সর্বস্বত্ব সংরক্ষিত।</p>
+                                <p className="text-xs text-purple-300/80 mt-1"> {/* UPDATED TEXT COLOR */}
+                                    <strong className="font-semibold text-purple-100 mr-1">ডেভেলপার:</strong> {/* UPDATED TEXT COLOR */}
+                                    <a href="https://wa.me/8801647431836?text=Website%20Development%20Query" target="_blank" rel="noopener noreferrer" className="hover:text-white underline">যোগাযোগ করুন</a>
+                                </p>
+                            </div>
+                        </footer>
+                    </AnimatedSection>
+
+                    <OrderForm isOpen={isFormOpen} onClose={closeOrderForm} productToOrder={selectedProductForForm} recommendedUnits={aiRecommendedUnits} />
+                </div>
+                <MobileBottomNav />
+            </React.Fragment>
+        );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+</script>
+<style type="text/css">@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css');
+        
+        :root {
+            --primary-dark-purple: #4A0072; 
+            --primary-purple: #6A1B9A;    
+            --medium-purple: #7E22CE;     
+            --light-purple: #A855F7;      
+            --very-light-purple: #D8B4FE; 
+            --lavender-bg: #F3E5F5;       
+            --pink-accent: #DB2777;       
+            --light-pink-accent: #F9A8D4; 
+            --white-text: #FFFFFF;
+            --text-on-dark: #F3E8FF;      
+
+            /* For rgba conversions if needed for shadows/bgs */
+            --primary-purple-rgb: 106, 27, 154;
+            --medium-purple-rgb: 126, 34, 206;
+            --pink-accent-rgb: 219, 39, 119;
+            --light-pink-accent-rgb: 249, 168, 212;
+            --very-light-purple-rgb: 216, 180, 254;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.7s cubic-bezier(0.390, 0.575, 0.565, 1.000) forwards; }
+        
+        @keyframes subtleShine {
+            0% { background-position: -250% center; }
+            100% { background-position: 250% center; }
+        }
+
+        @keyframes backgroundPan {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 4px 15px 0 rgba(var(--primary-purple-rgb), 0.35); }
+            50% { transform: scale(1.03); box-shadow: 0 6px 25px 0 rgba(var(--pink-accent-rgb), 0.45); }
+            100% { transform: scale(1); box-shadow: 0 4px 15px 0 rgba(var(--primary-purple-rgb), 0.35); }
+        }
+
+        @keyframes subtleRotate {
+            0% { transform: rotate(-1deg); }
+            50% { transform: rotate(1deg); }
+            100% { transform: rotate(-1deg); }
+        }
+
+
+        html {
+            scroll-behavior: smooth;
+        }
+        body { 
+            -webkit-font-smoothing: antialiased; 
+            -moz-osx-font-smoothing: grayscale;
+            margin: 0;
+            background-image: linear-gradient(160deg, var(--lavender-bg) 0%, var(--very-light-purple) 40%, var(--light-pink-accent) 100%);
+            background-size: 150% 150%; /* Slightly less movement for body */
+            animation: backgroundPan 35s ease infinite alternate; /* Slower, alternate */
+            color: #2d3748; /* Darker gray for better contrast */
+            overflow-x: hidden; /* Prevent horizontal scroll from animations */
+        }
+        #root {
+            width: 100%;
+        }
+        .font-['Noto_Serif_Bengali'] { font-family: 'Noto Serif Bengali', serif; font-weight: 700; } /* Bolder titles */
+        .font-['Hind_Siliguri'] { font-family: 'Hind Siliguri', sans-serif; }
+        
+        .peer:focus ~ label, .peer:not(:placeholder-shown) ~ label {
+            transform: translateY(-0.75rem) translateX(-0.1rem) scale(0.75); /* Adjusted for clarity */
+            color: var(--primary-purple); 
+            background-color: white; 
+            padding: 0 0.25rem; /* Slightly more padding */
+            font-weight: 600; /* Bolder label on focus */
+            transition: all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55); /* Playful transition */
+        }
+        .bg-white\/95.backdrop-blur-md .peer:focus ~ label,
+        .bg-white\/95 .peer:focus ~ label {
+             background-color: #f9fafb; 
+        }
+         .fixed.inset-0.bg-black\/80 .peer:focus ~ label {
+            background-color: rgba(249, 250, 251, 0.95); 
+            color: var(--primary-purple);
+         }
+        .peer.border-gray-300:focus { /* Input field focus style */
+            border-color: var(--medium-purple) !important; /* Override Tailwind */
+            box-shadow: 0 0 0 3px rgba(var(--medium-purple-rgb), 0.2);
+        }
+         .peer.border-gray-300 {
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+         }
+
+
+        .overflow-x-auto::-webkit-scrollbar { height: 8px; width: 8px; }
+        .overflow-x-auto::-webkit-scrollbar-track { background: var(--very-light-purple); border-radius: 10px; }
+        .overflow-x-auto::-webkit-scrollbar-thumb { background: var(--medium-purple); border-radius: 10px; border: 2px solid var(--very-light-purple); }
+        .overflow-x-auto::-webkit-scrollbar-thumb:hover { background: var(--primary-purple); }
+
+        .shadow-top-lg {
+            box-shadow: 0 -6px 15px -3px rgba(var(--primary-purple-rgb), 0.12), 0 -3px 8px -2px rgba(var(--primary-purple-rgb), 0.1);
+        }
+
+        .initial-fade-in-up {
+            opacity: 0;
+            transform: translateY(25px); /* Slightly more pronounced */
+            animation: fadeInUpAnimation 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+        }
+        .initial-scale-up {
+            opacity: 0;
+            transform: scale(0.9); /* Slightly more pronounced */
+            animation: scaleUpAnimation 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+        }
+        
+        .initial-delay-200 { animation-delay: 0.2s; }
+        .initial-delay-400 { animation-delay: 0.4s; }
+
+
+        @keyframes fadeInUpAnimation {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        @keyframes scaleUpAnimation {
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        .header-animated-bg {
+            background: linear-gradient(120deg, var(--primary-purple) 0%, var(--medium-purple) 30%, var(--pink-accent) 70%, var(--light-purple) 100%);
+            background-size: 400% 400%; /* Larger size for smoother animation */
+            animation: backgroundPan 18s ease infinite alternate;
+        }
+        .footer-animated-bg {
+            background: linear-gradient(-120deg, var(--primary-dark-purple) 0%, var(--primary-purple) 40%, var(--pink-accent) 100%);
+            background-size: 300% 300%;
+            animation: backgroundPan 22s ease infinite alternate;
+        }
+        .page-title-glow {
+            /* text-shadow: 0 0 10px rgba(255,255,255,0.4), 0 0 18px rgba(var(--light-pink-accent-rgb),0.3), 0 0 25px rgba(var(--very-light-purple-rgb),0.2); */
+            color: transparent;
+            background: linear-gradient(45deg, var(--white-text), var(--light-pink-accent), var(--white-text));
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            background-clip: text;
+            animation: subtleShine 5s linear infinite;
+        }
+
+
+        .main-cta-button {
+            background-image: linear-gradient(to right, var(--primary-purple) 0%, var(--pink-accent) 50%, var(--medium-purple) 100%);
+            background-size: 250% auto;
+            color: white;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease-out, background-position 0.5s ease-out;
+            border-radius: 50px; /* Pill shape */
+            padding-left: 2rem; /* More padding for pill shape */
+            padding-right: 2rem;
+            box-shadow: 0 5px 20px 0 rgba(var(--primary-purple-rgb), 0.3);
+            animation: pulse 2.5s infinite ease-in-out;
+        }
+        .main-cta-button:hover {
+            background-position: right center; 
+            box-shadow: 0 8px 28px 0 rgba(var(--pink-accent-rgb), 0.45);
+            transform: translateY(-3px) scale(1.05);
+            animation-play-state: paused; /* Pause pulse on hover */
+        }
+        .main-cta-button i {
+            transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .main-cta-button:hover i {
+            transform: rotate(15deg) scale(1.15) translateX(3px);
+        }
+
+
+        .product-card-item, 
+        .bg-white\/90.backdrop-blur-md.rounded-xl,
+        .relative.mx-auto.max-w-lg.group .rounded-2xl.shadow-xl
+         {
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.3s ease-in-out;
+            border: 1px solid transparent; 
+            overflow: hidden; /* For image zoom containment */
+        }
+        .product-card-item:hover,
+        .bg-white\/90.backdrop-blur-md.rounded-xl:hover,
+        .relative.mx-auto.max-w-lg.group:hover .rounded-2xl.shadow-xl
+         {
+            transform: translateY(-8px) scale(1.04) rotateY(2deg); /* Slight 3D tilt */
+            box-shadow: 0 18px 35px rgba(var(--primary-purple-rgb),0.12), 0 10px 20px rgba(var(--primary-purple-rgb),0.08);
+        }
+        .product-card-item:hover {
+             border-color: var(--light-purple); 
+        }
+         .product-card-image {
+            transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), filter 0.5s ease; /* Smoother image zoom */
+        }
+        .product-card-item:hover .product-card-image {
+            transform: scale(1.15);
+            filter: saturate(1.15) brightness(1.08);
+        }
+        .relative.mx-auto.max-w-lg.group:hover .rounded-2xl.shadow-xl { /* Hero image */
+            animation: subtleRotate 5s infinite ease-in-out alternate;
+        }
+
+
+        h2.font-\['Noto_Serif_Bengali'\][class*="text-purple-"], 
+        h2.font-\['Noto_Serif_Bengali'\][class*="text-gray-"]
+        {
+            position: relative;
+            padding-bottom: 15px; 
+            margin-bottom: 1.75rem; 
+            color: var(--primary-purple);
+            /* Animated text gradient for titles */
+            background-image: linear-gradient(90deg, var(--primary-purple), var(--pink-accent), var(--primary-purple));
+            background-size: 250% auto;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: subtleShine 6s linear infinite;
+        }
+        h2.font-\['Noto_Serif_Bengali'\][class*="text-purple-"]::after,
+        h2.font-\['Noto_Serif_Bengali'\][class*="text-gray-"]::after
+         {
+            content: '';
+            position: absolute;
+            left: 50%;
+            bottom: 0;
+            transform: translateX(-50%) scaleX(0);
+            width: 80px; 
+            height: 4px; 
+            background: linear-gradient(to right, var(--light-purple), var(--pink-accent), var(--light-purple)); 
+            background-size: 200% auto;
+            border-radius: 3px;
+            opacity: 0;
+            transition: transform 0.6s cubic-bezier(0.68, -0.6, 0.32, 1.6), opacity 0.5s ease-out;
+            transition-delay: 0.2s;
+        }
+        .opacity-100.translate-y-0 h2.font-\['Noto_Serif_Bengali'\][class*="text-purple-"]::after,
+        .opacity-100.translate-y-0 h2.font-\['Noto_Serif_Bengali'\][class*="text-gray-"]::after
+         {
+            transform: translateX(-50%) scaleX(1);
+            opacity: 1;
+            animation: subtleShine 4s linear infinite alternate 0.5s; /* Shine for the underline */
+        }
+
+
+        .max-w-xs.mx-auto button.bg-gradient-to-r {
+            transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-width: 1px;
+            border-radius: 20px; /* Rounded option buttons */
+        }
+        .max-w-xs.mx-auto button.bg-gradient-to-r:hover {
+            background-image: linear-gradient(to right, var(--medium-purple) , var(--light-purple) );
+            color: white;
+            box-shadow: 0 6px 18px rgba(var(--medium-purple-rgb), 0.3);
+            border-color: var(--primary-purple); 
+            transform: translateY(-3px) scale(1.06);
+        }
+
+
+        .flex.items-start.gap-2\.5.p-2\.5.bg-white\/40:hover {
+            background-color: rgba(var(--very-light-purple-rgb), 0.6);
+            box-shadow: 0 4px 12px rgba(var(--primary-purple-rgb),0.12);
+            border-color: var(--light-purple);
+        }
+        .flex.items-start.gap-2\.5.p-2\.5.bg-white\/40 {
+             transition: background-color 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease, transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+         .flex.items-start.gap-2\.5.p-2\.5.bg-white\/40:hover {
+            transform: translateX(4px) scale(1.01);
+        }
+        .flex.items-start.gap-2\.5.p-2\.5.bg-white\/40:hover i {
+            transform: rotate(-8deg) scale(1.15);
+            color: var(--primary-purple);
+        }
+         .flex.items-start.gap-2\.5.p-2\.5.bg-white\/40 i {
+             transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.3s ease;
+         }
+
+
+        footer a {
+            transition: color 0.3s ease-in-out, text-shadow 0.3s ease-in-out;
+        }
+        footer a:hover {
+            color: var(--light-pink-accent); 
+            text-shadow: 0 0 10px rgba(var(--light-pink-accent-rgb), 0.8);
+        }
+        footer .fab, footer .fas {
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.3s ease-in-out;
+        }
+        footer a:hover .fab, footer a:hover .fas {
+            transform: scale(1.35) rotate(8deg) translateY(-2px);
+            color: var(--white-text); 
+        }
+
+
+        .fixed.bottom-0 a::before {
+            background-color: var(--primary-purple);
+            height: 2.5px; /* Thicker underline */
+            transition: transform 0.35s cubic-bezier(0.23, 1, 0.32, 1); /* Smoother ease */
+        }
+        .fixed.bottom-0 a:hover::before {
+            transform: translateX(-50%) scaleX(1.1); /* Slightly wider underline on hover */
+        }
+        .fixed.bottom-0 .fab, .fixed.bottom-0 .fas {
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.25s ease-out;
+        }
+        .fixed.bottom-0 a:hover .fab, .fixed.bottom-0 a:hover .fas {
+            transform: scale(1.25) translateY(-4px) rotate(5deg); /* More playful */
+        }
+        .fixed.bottom-0 a:hover span {
+            color: var(--primary-purple); 
+        }
+        .fixed.bottom-0 a span {
+            transition: color 0.25s ease-out;
+        }
+
+
+        *:focus-visible {
+            outline: 3px solid var(--light-purple); /* More visible focus */
+            outline-offset: 3px;
+            box-shadow: 0 0 0 5px rgba(var(--light-purple-rgb), 0.35);
+        }
+        
+        body.text-gray-800 {
+            color: #1a202c; /* Even darker gray for main text */
+        }
+
+</style>
+
+</body>
+</html>
